@@ -61,7 +61,7 @@ export async function getDataExcel(page) {
 
       const formaPagamento = row['FORMA DE PAGAMENTO'];
       if (formaPagamento) {
-        await pagamentoSelect.select(String(formaPagamento).toLowerCase());
+        await pagamentoSelect.select(tipoNormalizado(formaPagamento));
       }
 
       if (tipoSelecionado === 'entrega') {

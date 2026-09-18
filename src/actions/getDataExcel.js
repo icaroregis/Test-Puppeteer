@@ -1,6 +1,7 @@
 import XLSX from 'xlsx';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { tipoNormalizado } from '../utils/tipoNormalizado.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +35,6 @@ export async function getDataExcel(page) {
       );
       console.log('Texto do elemento:', await pagamentoSelect.evaluate((el) => el.textContent));
 
-      const taxaInput = await page.waitForSelector(
-        '::-p-xpath(//label[text()="Taxa de entrega"]/following-sibling::input[@type="number"])',
-      );
-      console.log('Valor atual da taxa de entrega:', await taxaInput.evaluate((el) => el.value));
-
       // capturando dados da planilha
       const clienteNome = row['CLIENTE'];
       if (clienteNome) {
@@ -58,8 +54,9 @@ export async function getDataExcel(page) {
       }
 
       const tipo = row['TIPO'];
-      if (tipo) {
-        await tipoSelect.select(String(tipo).toLowerCase());
+      const tipoSelecionado = tipoNormalizado(tipo);
+      if (tipoSelecionado) {
+        await tipoSelect.select(tipoSelecionado);
       }
 
       const formaPagamento = row['FORMA DE PAGAMENTO'];
@@ -67,19 +64,25 @@ export async function getDataExcel(page) {
         await pagamentoSelect.select(String(formaPagamento).toLowerCase());
       }
 
-      const taxaEntrega = row['TAXA DE ENTREGA'];
-      console.log('Taxa de entrega:', taxaEntrega);
-      if (taxaEntrega !== undefined) {
-        await taxaInput.click({ clickCount: 3 });
-        await taxaInput.press('Backspace');
-        await taxaInput.type(String(taxaEntrega));
+      if (tipoSelecionado === 'entrega') {
+        const taxaInput = await page.waitForSelector(
+          '::-p-xpath(//label[text()="Taxa de entrega"]/following-sibling::input[@type="number"])',
+        );
+        const taxaEntrega = row['TAXA DE ENTREGA'];
+        console.log('Taxa de entrega:', taxaEntrega);
+        if (taxaEntrega !== undefined && taxaEntrega !== null && taxaEntrega !== '') {
+          await taxaInput.click({ clickCount: 3 });
+          await taxaInput.press('Backspace');
+          await taxaInput.type(String(taxaEntrega));
+        }
       }
+
+      const itensPedidoStr = row['ITENS DO PEDIDO'];
+      console.log('Itens do pedido:', itensPedidoStr);
 
       await page.locator('button[type="submit"]').click();
       await page.waitForSelector('.mensagem-sucesso', { visible: true });
     }
-
-    console.log('Todos os pedidos foram processados com sucesso!');
   } catch (error) {
     console.error('Erro ao ler a planilha ou preencher formulário:', error);
   }

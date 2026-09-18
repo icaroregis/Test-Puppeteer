@@ -20,7 +20,7 @@ export async function getDataExcel(page) {
     for (const [index, row] of data.entries()) {
       console.log(`Processando registro ${index + 1}:`, row);
 
-      // dados gerais
+      // selecionando elementos da página
       const clienteSelect = await page.waitForSelector(
         '::-p-xpath(//label[text()="Cliente"]/following-sibling::select)',
       );
@@ -35,10 +35,11 @@ export async function getDataExcel(page) {
       console.log('Texto do elemento:', await pagamentoSelect.evaluate((el) => el.textContent));
 
       const taxaInput = await page.waitForSelector(
-        '::-p-xpath(//label[text()="Taxa de entrega"]/following-sibling::input[@type="number"]',
+        '::-p-xpath(//label[text()="Taxa de entrega"]/following-sibling::input[@type="number"])',
       );
-      console.log('Texto do elemento:', await taxaInput.evaluate((el) => el.textContent));
+      console.log('Valor atual da taxa de entrega:', await taxaInput.evaluate((el) => el.value));
 
+      // capturando dados da planilha
       const clienteNome = row['CLIENTE'];
       if (clienteNome) {
         await page.evaluate(
@@ -67,45 +68,12 @@ export async function getDataExcel(page) {
       }
 
       const taxaEntrega = row['TAXA DE ENTREGA'];
+      console.log('Taxa de entrega:', taxaEntrega);
       if (taxaEntrega !== undefined) {
         await taxaInput.click({ clickCount: 3 });
         await taxaInput.press('Backspace');
         await taxaInput.type(String(taxaEntrega));
       }
-
-      // const itensPedidoStr = row['ITENS DO PEDIDO'];
-      // console.log('Itens do pedido:', itensPedidoStr);
-      // const quantidadeItem = Number(row['QUANTIDADE']) || 1;
-      // console.log('Quantidade do item:', quantidadeItem);
-
-      // if (itensPedidoStr) {
-      //   const containerPizza = await page.waitForSelector('::-p-xpath(//div[div[text()="Pizza"]])');
-
-      //   const botaoMaisHandle = await page.evaluateHandle(
-      //     (container, itemNome) => {
-      //       const linhasDosItens = Array.from(container.querySelectorAll('.justify-between'));
-
-      //       const linhaDoItem = linhasDosItens.find((linha) =>
-      //         linha.textContent.toLowerCase().includes(itemNome.toLowerCase()),
-      //       );
-
-      //       if (linhaDoItem) {
-      //         const botoes = linhaDoItem.querySelectorAll('button');
-      //         return botoes[botoes.length - 1];
-      //       }
-      //       return null;
-      //     },
-      //     containerPizza,
-      //     itensPedidoStr,
-      //   );
-
-      //   if (botaoMaisHandle && botaoMaisHandle.asElement()) {
-      //     for (let i = 0; i < quantidadeItem; i += 1) {
-      //       await botaoMaisHandle.click();
-      //     }
-      //     await botaoMaisHandle.dispose();
-      //   }
-      // }
 
       await page.locator('button[type="submit"]').click();
       await page.waitForSelector('.mensagem-sucesso', { visible: true });

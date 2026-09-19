@@ -1,4 +1,4 @@
-import { textNormalizado } from '../utils/tipoNormalizado.js';
+import { textoNormalizado } from '../utils/textoNormalizado.js';
 
 export async function realizarPedido(page, pedidos) {
   for (const [index, row] of pedidos.entries()) {
@@ -28,14 +28,14 @@ export async function realizarPedido(page, pedidos) {
       );
     }
 
-    const tipoSelecionado = textNormalizado(row['TIPO']);
+    const tipoSelecionado = textoNormalizado(row['TIPO']);
     if (tipoSelecionado) {
       await tipoSelect.select(tipoSelecionado);
     }
 
     const formaPagamento = row['FORMA DE PAGAMENTO'];
     if (formaPagamento) {
-      await pagamentoSelect.select(textNormalizado(formaPagamento));
+      await pagamentoSelect.select(textoNormalizado(formaPagamento));
     }
 
     if (tipoSelecionado === 'entrega') {
@@ -57,7 +57,7 @@ export async function realizarPedido(page, pedidos) {
       return (
         Array.from(container.children)
           .slice(1)
-          .find((linha) => textNormalizado(linha.querySelector('p')?.textContent) === textNormalizado(nomePizza)) ??
+          .find((linha) => textoNormalizado(linha.querySelector('p')?.textContent) === textoNormalizado(nomePizza)) ??
         null
       );
     }, itensPedidoStr);

@@ -1,4 +1,4 @@
-export function textNormalizado(text) {
+export function textoNormalizado(text) {
   return String(text ?? '')
     .trim()
     .toLowerCase();

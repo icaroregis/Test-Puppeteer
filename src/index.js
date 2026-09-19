@@ -5,6 +5,7 @@ import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
 (async () => {
+  // 0 PASSO INICIAR O BROWSER
   const browser = await puppeteer.launch({
     headless: false,
     defaultViewport: null,

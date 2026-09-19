@@ -1,8 +1,8 @@
 import puppeteer from 'puppeteer';
 import { login } from './actions/login.js';
 import { getDataExcel } from './actions/getDataExcel.js';
-import { selectItemSidebar } from './actions/selectItemSidebar.js';
 import { realizarPedido } from './actions/realizarPedido.js';
+import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -23,4 +23,6 @@ import { realizarPedido } from './actions/realizarPedido.js';
 
   // 4 PASSO REALIZAR O PEDIDO
   await realizarPedido(page, pedidos);
+
+  await browser.close();
 })();

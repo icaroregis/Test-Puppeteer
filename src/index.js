@@ -24,5 +24,6 @@ import { selectItemSidebar } from './actions/selectItemSidebar.js';
   // 4 PASSO REALIZAR O PEDIDO
   await realizarPedido(page, pedidos);
 
+  // 5 PASSO FECHAR O BROWSER
   await browser.close();
 })();

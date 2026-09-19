@@ -1,5 +1,5 @@
-export function tipoNormalizado(tipo) {
-  return String(tipo ?? '')
+export function textNormalizado(text) {
+  return String(text ?? '')
     .trim()
     .toLowerCase();
 }

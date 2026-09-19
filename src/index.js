@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import { login } from './actions/login.js';
 import { getDataExcel } from './actions/getDataExcel.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
+import { realizarPedido } from './actions/realizarPedido.js';
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -18,5 +19,8 @@ import { selectItemSidebar } from './actions/selectItemSidebar.js';
   await selectItemSidebar(page);
 
   // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
-  await getDataExcel(page);
+  const pedidos = await getDataExcel();
+
+  // 4 PASSO REALIZAR O PEDIDO
+  await realizarPedido(page, pedidos);
 })();

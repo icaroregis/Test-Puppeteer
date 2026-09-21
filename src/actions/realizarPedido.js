@@ -1,10 +1,10 @@
 import { textoNormalizado } from '../utils/textoNormalizado.js';
 
-export async function realizarPedido(page, pedidos) {
+export async function realizarPedido(page, pedidos, console) {
   const confirmacaoPedido = '::-p-xpath(//div[normalize-space(text())="Pedido criado com sucesso."])';
 
   for (const [index, row] of pedidos.entries()) {
-    console.log(`Processando registro ${index + 1}:`, row);
+    console.info(`Processando registro ${index + 1}:`, row);
 
     if (index > 0) {
       await page.locator('button ::-p-text(+ Novo pedido)').click();
@@ -18,6 +18,7 @@ export async function realizarPedido(page, pedidos) {
 
     const clienteNome = row['CLIENTE'];
     if (clienteNome) {
+      console.info(`Buscando cliente "${clienteNome}"...`);
       await page.evaluate(
         (selectElem, nome) => {
           const option = Array.from(selectElem.options).find(
@@ -36,11 +37,13 @@ export async function realizarPedido(page, pedidos) {
 
     const tipoSelecionado = textoNormalizado(row['TIPO']);
     if (tipoSelecionado) {
+      console.info(`Selecionando tipo de pedido "${tipoSelecionado}"...`);
       await tipoSelect.select(tipoSelecionado);
     }
 
     const formaPagamento = row['FORMA DE PAGAMENTO'];
     if (formaPagamento) {
+      console.info(`Selecionando forma de pagamento "${formaPagamento}"...`);
       await pagamentoSelect.select(textoNormalizado(formaPagamento));
     }
 
@@ -50,6 +53,7 @@ export async function realizarPedido(page, pedidos) {
       );
       const taxaEntrega = row['TAXA DE ENTREGA'];
       if (taxaEntrega !== undefined && taxaEntrega !== null && taxaEntrega !== '') {
+        console.info(`Informando taxa de entrega "${taxaEntrega}"...`);
         await taxaInput.click({ clickCount: 3 });
         await taxaInput.press('Backspace');
         await taxaInput.type(String(taxaEntrega));
@@ -83,7 +87,7 @@ export async function realizarPedido(page, pedidos) {
           .filter(Boolean),
       );
       await linhaPizzaHandle.dispose();
-      console.warn(
+      console.info(
         `Pedido ${index + 1} ignorado: pizza "${itensPedidoStr}" não encontrada. Sabores disponíveis: ${saboresDisponiveis.join(', ')}.`,
       );
       await page.locator('form button ::-p-text(Cancelar)').click();
@@ -111,7 +115,7 @@ export async function realizarPedido(page, pedidos) {
       linhaPizza,
       quantidade,
     );
-    console.log(`${quantidade} unidade(s) de "${itensPedidoStr}" adicionada(s).`);
+    console.info(`${quantidade} unidade(s) de "${itensPedidoStr}" adicionada(s).`);
 
     await botaoAdicionarHandle.dispose();
     await linhaPizzaHandle.dispose();
@@ -124,5 +128,5 @@ export async function realizarPedido(page, pedidos) {
     await page.waitForSelector('button[type="submit"]', { hidden: true });
   }
 
-  console.log('Todos os pedidos foram processados com sucesso!');
+  console.info('Todos os pedidos foram processados com sucesso!');
 }

@@ -10,8 +10,9 @@ import { selectItemSidebar } from './actions/selectItemSidebar.js';
 initHobots();
 
 // REGISTRAR A TAREFA
-Hobots.register('minha-task', async (_params, ctx) => {
-  ctx.log.info('Iniciando o processamento dos pedidos da planilha.');
+Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
+  const console = ctx.log;
+  console.info('Iniciando o processamento dos pedidos da planilha.');
 
   // 0 PASSO INICIAR O BROWSER
   const browser = await puppeteer.launch({
@@ -33,13 +34,13 @@ Hobots.register('minha-task', async (_params, ctx) => {
     const pedidos = await getDataExcel();
 
     // 4 PASSO REALIZAR O PEDIDO
-    await realizarPedido(page, pedidos);
+    await realizarPedido(page, pedidos, console);
   } finally {
     // 5 PASSO FECHAR O BROWSER
     await browser.close();
   }
 
-  ctx.log.info('Processamento dos pedidos concluido.');
+  console.info('Processamento dos pedidos concluido.');
 });
 
 Hobots.start();

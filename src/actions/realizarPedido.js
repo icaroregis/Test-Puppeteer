@@ -165,12 +165,14 @@ export async function realizarPedido(page, pedidos, ctx) {
       ]);
       await page.waitForSelector('button[type="submit"]', { hidden: true });
       etapa.finish();
-
       ctx.items.succeeded(payload, { id: String(numeroPedido) });
       step.finish();
     } catch (erro) {
       const mensagem = `Etapa "${nomeEtapa}": ${erro.message ?? erro}`;
-      etapa?.setData('erro', String(erro.message ?? erro)).setStatus('error').finish();
+      etapa
+        ?.setData('erro', String(erro.message ?? erro))
+        .setStatus('error')
+        .finish();
       step.setStatus('error').finish();
       console.error(`Pedido ${numeroPedido} falhou: ${mensagem}`);
       const screenshot = await page.screenshot().catch(() => undefined);

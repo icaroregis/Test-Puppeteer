@@ -14,40 +14,28 @@ Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
   const console = ctx.log;
   console.info('Iniciando o processamento dos pedidos da planilha.');
 
-  let browser;
+  // 0 PASSO INICIAR O BROWSER
+  const browser = await puppeteer.launch({
+    headless: false,
+    defaultViewport: null,
+    args: ['--disable-infobars', '--start-maximized'],
+  });
+  const page = await browser.newPage();
 
-  try {
-    // 0 PASSO INICIAR O BROWSER
-    browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      args: ['--disable-infobars', '--start-maximized'],
-    });
-    const page = await browser.newPage();
+  // 1 PASSO FAZER LOGIN
+  await login(page);
 
-    // 1 PASSO FAZER LOGIN
-    await login(page);
+  // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
+  await selectItemSidebar(page);
 
-    // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
-    await selectItemSidebar(page);
+  // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
+  const pedidos = await getDataExcel();
 
-    // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
-    const pedidos = await getDataExcel();
+  // 4 PASSO REALIZAR O PEDIDO
+  await realizarPedido(page, pedidos, ctx);
 
-    // 4 PASSO REALIZAR O PEDIDO
-    await realizarPedido(page, pedidos, ctx);
-  } catch (erro) {
-    console.error(`Processamento falhou: ${erro.stack ?? erro.message ?? erro}`);
-    Hobots.captureException(erro);
-    throw erro;
-  } finally {
-    // 5 PASSO FECHAR O BROWSER
-    if (browser) {
-      await browser.close();
-    }
-  }
-
-  console.info('Processamento dos pedidos concluido.');
+  // 5 PASSO FECHAR O BROWSER
+  await browser.close();
 });
 
 Hobots.start();

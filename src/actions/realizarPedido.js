@@ -83,9 +83,12 @@ export async function realizarPedido(page, pedidos) {
           .filter(Boolean),
       );
       await linhaPizzaHandle.dispose();
-      throw new Error(
-        `Pizza "${itensPedidoStr}" não encontrada. Sabores disponíveis: ${saboresDisponiveis.join(', ')}.`,
+      console.warn(
+        `Pedido ${index + 1} ignorado: pizza "${itensPedidoStr}" não encontrada. Sabores disponíveis: ${saboresDisponiveis.join(', ')}.`,
       );
+      await page.locator('form button ::-p-text(Cancelar)').click();
+      await page.waitForSelector('button[type="submit"]', { hidden: true });
+      continue;
     }
 
     const botaoAdicionarHandle = await linhaPizza.evaluateHandle(

@@ -1,10 +1,14 @@
 import puppeteer from 'puppeteer';
+import { initHobots } from './hobots.js';
 import { login } from './actions/login.js';
 import { getDataExcel } from './actions/getDataExcel.js';
 import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
 (async () => {
+  // Iniciar o Hobots
+  initHobots();
+
   // 0 PASSO INICIAR O BROWSER
   const browser = await puppeteer.launch({
     headless: false,

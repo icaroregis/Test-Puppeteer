@@ -1,8 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env src/index.js",
-    "test": "node --test"
+    "start": "node --env-file=.env src/index.js"
   },
   "dependencies": {
     "hobots": "^2.2.0",

@@ -1,8 +1,14 @@
 import { textoNormalizado } from '../utils/textoNormalizado.js';
 
 export async function realizarPedido(page, pedidos) {
+  const confirmacaoPedido = '::-p-xpath(//div[normalize-space(text())="Pedido criado com sucesso."])';
+
   for (const [index, row] of pedidos.entries()) {
     console.log(`Processando registro ${index + 1}:`, row);
+
+    if (index > 0) {
+      await page.locator('button ::-p-text(+ Novo pedido)').click();
+    }
 
     const clienteSelect = await page.waitForSelector('::-p-xpath(//label[text()="Cliente"]/following-sibling::select)');
     const tipoSelect = await page.waitForSelector('::-p-xpath(//label[text()="Tipo"]/following-sibling::select)');
@@ -107,8 +113,12 @@ export async function realizarPedido(page, pedidos) {
     await botaoAdicionarHandle.dispose();
     await linhaPizzaHandle.dispose();
 
-    await page.locator('button[type="submit"]').click();
-    await page.waitForSelector('.mensagem-sucesso', { visible: true });
+    await page.waitForSelector(confirmacaoPedido, { hidden: true });
+    await Promise.all([
+      page.waitForSelector(confirmacaoPedido, { visible: true }),
+      page.locator('button[type="submit"]').click(),
+    ]);
+    await page.waitForSelector('button[type="submit"]', { hidden: true });
   }
 
   console.log('Todos os pedidos foram processados com sucesso!');

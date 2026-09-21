@@ -1,4 +1,5 @@
 import * as Hobots from 'hobots';
+import retry from 'async-retry';
 import { textoNormalizado } from '../utils/textoNormalizado.js';
 
 export async function realizarPedido(page, pedidos, ctx) {
@@ -32,17 +33,56 @@ export async function realizarPedido(page, pedidos, ctx) {
     };
 
     try {
-      iniciarEtapa('Abrir formulario do pedido');
-      if (index > 0) {
-        await page.locator('button ::-p-text(+ Novo pedido)').click();
-      }
+      iniciarEtapa('Abrir formulário do pedido');
+      // Repete apenas a preparação: reenviar um pedido pode duplicar a compra.
+      const { clienteSelect, tipoSelect, pagamentoSelect } = await retry(
+        async (_bail, tentativa) => {
+          console.info(`Pedido ${numeroPedido}: tentativa ${tentativa}/3 de abrir o formulário.`);
+          const handles = [];
+          try {
+            const formulario = await page.$('form');
+            let formularioVisivel = false;
+            if (formulario) {
+              try {
+                formularioVisivel = await formulario.isVisible();
+              } finally {
+                await formulario.dispose();
+              }
+            }
+            if (!formularioVisivel) {
+              await page.locator('button ::-p-text(+ Novo pedido)').setTimeout(30000).click();
+            }
 
-      const clienteSelect = await page.waitForSelector(
-        '::-p-xpath(//label[text()="Cliente"]/following-sibling::select)',
-      );
-      const tipoSelect = await page.waitForSelector('::-p-xpath(//label[text()="Tipo"]/following-sibling::select)');
-      const pagamentoSelect = await page.waitForSelector(
-        '::-p-xpath(//label[text()="Forma de pagamento"]/following-sibling::select)',
+            const form = await page.waitForSelector('form', { visible: true, timeout: 30000 });
+            handles.push(form);
+            const selects = [];
+            for (const label of ['Cliente', 'Tipo', 'Forma de pagamento']) {
+              const select = await page.waitForSelector(
+                `::-p-xpath(//label[text()="${label}"]/following-sibling::select)`,
+                { visible: true, timeout: 30000 },
+              );
+              handles.push(select);
+              selects.push(select);
+            }
+            await form.dispose();
+            console.info(`Pedido ${numeroPedido}: formulário pronto na tentativa ${tentativa}/3.`);
+            return { clienteSelect: selects[0], tipoSelect: selects[1], pagamentoSelect: selects[2] };
+          } catch (erro) {
+            await Promise.all(handles.map((handle) => handle.dispose().catch(() => {})));
+            console.warn(`Pedido ${numeroPedido}: tentativa ${tentativa}/3 falhou: ${erro.message ?? erro}`);
+            throw erro;
+          }
+        },
+        {
+          retries: 2,
+          minTimeout: 1000,
+          maxTimeout: 1000,
+          factor: 1,
+          randomize: false,
+          onRetry: (_erro, tentativa) => {
+            console.info(`Pedido ${numeroPedido}: nova tentativa (${tentativa + 1}/3) em 1000ms.`);
+          },
+        },
       );
 
       if (clienteNome) {
@@ -166,6 +206,7 @@ export async function realizarPedido(page, pedidos, ctx) {
       await page.waitForSelector('button[type="submit"]', { hidden: true });
       etapa.finish();
       ctx.items.succeeded(payload, { id: String(numeroPedido) });
+      console.info(`Pedido ${numeroPedido} criado com sucesso.`);
       step.finish();
     } catch (erro) {
       const mensagem = `Etapa "${nomeEtapa}": ${erro.message ?? erro}`;
@@ -183,8 +224,8 @@ export async function realizarPedido(page, pedidos, ctx) {
       ctx.items.failed(mensagem, payload, { id: String(numeroPedido) });
 
       try {
-        await page.locator('form button ::-p-text(Cancelar)').click({ timeout: 2000 });
-        await page.waitForSelector('button[type="submit"]', { hidden: true });
+        await page.locator('form button ::-p-text(Cancelar)').setTimeout(2000).click();
+        await page.waitForSelector('button[type="submit"]', { hidden: true, timeout: 2000 });
       } catch {}
     } finally {
       ctx.progress.advance();

@@ -13,5 +13,6 @@ export function initHobots(env = process.env) {
     release: env.HOBOTS_RELEASE?.trim(),
     instanceId: env.HOBOTS_INSTANCE_ID?.trim() || hostname(),
     heartbeat: true,
+    tasks: true,
   });
 }

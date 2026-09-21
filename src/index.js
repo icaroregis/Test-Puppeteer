@@ -1,13 +1,17 @@
 import puppeteer from 'puppeteer';
+import * as Hobots from 'hobots';
 import { initHobots } from './hobots.js';
 import { login } from './actions/login.js';
 import { getDataExcel } from './actions/getDataExcel.js';
 import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
-(async () => {
-  // INICIAR O HOBOTS
-  initHobots();
+// INICIAR O HOBOTS
+initHobots();
+
+// REGISTRAR A TAREFA
+Hobots.register('minha-task', async (_params, ctx) => {
+  ctx.log.info('Iniciando o processamento dos pedidos da planilha.');
 
   // 0 PASSO INICIAR O BROWSER
   const browser = await puppeteer.launch({
@@ -15,20 +19,27 @@ import { selectItemSidebar } from './actions/selectItemSidebar.js';
     defaultViewport: null,
     args: ['--disable-infobars', '--start-maximized'],
   });
-  const page = await browser.newPage();
 
-  // 1 PASSO FAZER LOGIN
-  await login(page);
+  try {
+    const page = await browser.newPage();
 
-  // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
-  await selectItemSidebar(page);
+    // 1 PASSO FAZER LOGIN
+    await login(page);
 
-  // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
-  const pedidos = await getDataExcel();
+    // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
+    await selectItemSidebar(page);
 
-  // 4 PASSO REALIZAR O PEDIDO
-  await realizarPedido(page, pedidos);
+    // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
+    const pedidos = await getDataExcel();
 
-  // 5 PASSO FECHAR O BROWSER
-  await browser.close();
-})();
+    // 4 PASSO REALIZAR O PEDIDO
+    await realizarPedido(page, pedidos);
+  } finally {
+    // 5 PASSO FECHAR O BROWSER
+    await browser.close();
+  }
+
+  ctx.log.info('Processamento dos pedidos concluido.');
+});
+
+Hobots.start();

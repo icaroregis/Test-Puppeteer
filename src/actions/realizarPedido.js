@@ -54,6 +54,12 @@ export async function realizarPedido(page, pedidos) {
     const quantidade = Number(row['QUANTIDADE']);
     const pizzaContainer = await page.waitForSelector('::-p-xpath(//div[normalize-space(text())="Pizza"]/parent::div)');
     const linhaPizzaHandle = await pizzaContainer.evaluateHandle((container, nomePizza) => {
+      function textoNormalizado(text) {
+        return String(text ?? '')
+          .trim()
+          .toLowerCase();
+      }
+
       return (
         Array.from(container.children)
           .slice(1)

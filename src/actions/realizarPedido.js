@@ -23,8 +23,16 @@ export async function realizarPedido(page, pedidos, ctx) {
 
     console.info(`Processando registro ${numeroPedido}:`, row);
     const step = ctx.tx.startChild('pedido', `${clienteNome ?? 'pedido'} · ${itensPedidoStr ?? ''}`);
+    let etapa;
+    let nomeEtapa;
+    const iniciarEtapa = (nome) => {
+      etapa?.finish();
+      nomeEtapa = nome;
+      etapa = step.startChild('pedido.etapa', nome);
+    };
 
     try {
+      iniciarEtapa('Abrir formulario do pedido');
       if (index > 0) {
         await page.locator('button ::-p-text(+ Novo pedido)').click();
       }
@@ -38,6 +46,7 @@ export async function realizarPedido(page, pedidos, ctx) {
       );
 
       if (clienteNome) {
+        iniciarEtapa('Selecionar cliente');
         console.info(`Buscando cliente "${clienteNome}"...`);
         await page.evaluate(
           (selectElem, nome) => {
@@ -56,16 +65,19 @@ export async function realizarPedido(page, pedidos, ctx) {
       }
 
       if (tipoSelecionado) {
+        iniciarEtapa('Selecionar tipo do pedido');
         console.info(`Selecionando tipo de pedido "${tipoSelecionado}"...`);
         await tipoSelect.select(tipoSelecionado);
       }
 
       if (formaPagamento) {
+        iniciarEtapa('Selecionar forma de pagamento');
         console.info(`Selecionando forma de pagamento "${formaPagamento}"...`);
         await pagamentoSelect.select(textoNormalizado(formaPagamento));
       }
 
       if (tipoSelecionado === 'entrega') {
+        iniciarEtapa('Preencher taxa de entrega');
         const taxaInput = await page.waitForSelector(
           '::-p-xpath(//label[text()="Taxa de entrega"]/following-sibling::input[@type="number"])',
         );
@@ -77,6 +89,7 @@ export async function realizarPedido(page, pedidos, ctx) {
         }
       }
 
+      iniciarEtapa('Localizar pizza');
       const pizzaContainer = await page.waitForSelector(
         '::-p-xpath(//div[normalize-space(text())="Pizza"]/parent::div)',
       );
@@ -106,14 +119,18 @@ export async function realizarPedido(page, pedidos, ctx) {
         await linhaPizzaHandle.dispose();
         const mensagem = `pizza "${itensPedidoStr}" não encontrada. Sabores disponíveis: ${saboresDisponiveis.join(', ')}.`;
         console.info(`Pedido ${numeroPedido} ignorado: ${mensagem}`);
+        etapa.setStatus('warning').finish();
+        iniciarEtapa('Cancelar pedido sem pizza disponivel');
         await page.locator('form button ::-p-text(Cancelar)').click();
         await page.waitForSelector('button[type="submit"]', { hidden: true });
+        etapa.finish();
 
         ctx.items.occurrence(mensagem, payload, { id: String(numeroPedido) });
         step.setStatus('warning').finish();
         continue;
       }
 
+      iniciarEtapa('Adicionar quantidade da pizza');
       const botaoAdicionarHandle = await linhaPizza.evaluateHandle(
         (linha) =>
           Array.from(linha.querySelectorAll('button')).find((botao) => botao.textContent.trim() === '+') ?? null,
@@ -140,23 +157,28 @@ export async function realizarPedido(page, pedidos, ctx) {
       await botaoAdicionarHandle.dispose();
       await linhaPizzaHandle.dispose();
 
+      iniciarEtapa('Enviar pedido e aguardar confirmacao');
       await page.waitForSelector(confirmacaoPedido, { hidden: true });
       await Promise.all([
         page.waitForSelector(confirmacaoPedido, { visible: true }),
         page.locator('button[type="submit"]').click(),
       ]);
       await page.waitForSelector('button[type="submit"]', { hidden: true });
+      etapa.finish();
 
       ctx.items.succeeded(payload, { id: String(numeroPedido) });
       step.finish();
     } catch (erro) {
+      const mensagem = `Etapa "${nomeEtapa}": ${erro.message ?? erro}`;
+      etapa?.setData('erro', String(erro.message ?? erro)).setStatus('error').finish();
+      step.setStatus('error').finish();
+      console.error(`Pedido ${numeroPedido} falhou: ${mensagem}`);
       const screenshot = await page.screenshot().catch(() => undefined);
       Hobots.captureException(erro, {
+        extra: { pedido: numeroPedido, etapa: nomeEtapa },
         attachment: screenshot && { image: screenshot, caption: `pedido ${numeroPedido}` },
       });
-      ctx.items.failed(String(erro.message ?? erro), payload, { id: String(numeroPedido) });
-      step.setStatus('error').finish();
-      console.error(`Pedido ${numeroPedido} falhou: ${erro.message ?? erro}`);
+      ctx.items.failed(mensagem, payload, { id: String(numeroPedido) });
 
       try {
         await page.locator('form button ::-p-text(Cancelar)').click({ timeout: 2000 });
@@ -167,5 +189,5 @@ export async function realizarPedido(page, pedidos, ctx) {
     }
   }
 
-  console.info('Todos os pedidos foram processados com sucesso!');
+  console.info('Processamento de todos os pedidos finalizado.');
 }

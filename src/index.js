@@ -6,7 +6,7 @@ import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
 (async () => {
-  // Iniciar o Hobots
+  // INICIAR O HOBOTS
   initHobots();
 
   // 0 PASSO INICIAR O BROWSER

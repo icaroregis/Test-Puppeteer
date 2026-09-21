@@ -34,7 +34,7 @@ Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
     const pedidos = await getDataExcel();
 
     // 4 PASSO REALIZAR O PEDIDO
-    await realizarPedido(page, pedidos, console);
+    await realizarPedido(page, pedidos, ctx);
   } finally {
     // 5 PASSO FECHAR O BROWSER
     await browser.close();

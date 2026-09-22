@@ -29,7 +29,7 @@ Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
   await selectItemSidebar(page);
 
   // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
-  const pedidos = await getDataExcel();
+  const pedidos = await getDataExcel(ctx);
 
   // 4 PASSO REALIZAR O PEDIDO
   await realizarPedido(page, pedidos, ctx);

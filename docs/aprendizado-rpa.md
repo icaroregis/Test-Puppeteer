@@ -161,3 +161,73 @@ for (const [index, fruta] of frutas.entries()) {
 // 2: uva
 ```
 Sem `.entries()`, pra ter o índice seria preciso um `for` tradicional com contador manual (`for (let i = 0; i < frutas.length; i += 1) { frutas[i] }`). Com `.entries()` + `for...of`, índice e valor já vêm prontos, desestruturados. É exatamente o padrão usado em [`realizarPedido.js:12`](../src/actions/realizarPedido.js#L12): `.entries()` entra em cena porque o loop precisa do `row` (o pedido) **e** do `index` (pra virar `numeroPedido = index + 1`, usado nas mensagens de log) ao mesmo tempo. Se só precisasse do `row`, um `for (const row of pedidos)` simples já bastaria.
+
+---
+
+## 2026-09-22 — Essa função dá pra mover pra `utils/`?
+
+**Contexto:** [`realizarPedido.js:27-33`](../src/actions/realizarPedido.js#L27-L33) — a closure `iniciarEtapa`, usada 9 vezes dentro da função pra abrir/fechar sub-etapas (`step.startChild`) no rastreamento de performance do Hobots.
+
+**Dúvida:** seguindo boas práticas, essa função poderia (deveria) ir para `src/utils/`?
+
+**Resposta:** não neste caso — e o critério vale pra qualquer função, não só essa. A diferença central é **função pura** vs **closure com estado capturado**:
+
+- [`utils/textoNormalizado.js`](../src/utils/textoNormalizado.js) é uma função pura: recebe um argumento, devolve um resultado, não toca em nada fora dela. Isso é o que faz algo ser um bom candidato a `utils/` — pode ser movido, importado em qualquer lugar, testado isolado.
+- `iniciarEtapa` é uma closure que **muta três coisas do escopo ao redor**: as variáveis `let etapa` / `let nomeEtapa` (reatribuídas a cada chamada) e o objeto `step` (captura ele do escopo, chama `.startChild` nele). Mover isso pra `utils/` sem mais nada quebraria o acesso a esse estado.
+
+Além disso, rodei uma busca (`grep -rn "iniciarEtapa\|startChild" src`) e esse padrão só existe em `realizarPedido.js` — nenhuma outra `action` do projeto rastreia sub-etapas assim. Extrair uma função que só tem **um** usuário é generalizar sem ter um segundo caso real pra validar se a abstração está certa (isso é a "regra dos três/dois": só extrai quando o padrão se repete de fato, não quando parece que *poderia* se repetir — evita over-engineering e abstração errada).
+
+**Se o padrão se repetir no futuro** (ex.: `login.js` também passar a rastrear sub-etapas), o jeito certo de extrair não é mover a função como está — é transformar numa **função fábrica**, que recebe o que hoje é capturado do escopo e devolve os métodos com o estado isolado dentro do closure:
+```js
+// utils/rastreadorDeEtapa.js
+export function criarRastreadorDeEtapa(step) {
+  let etapa;
+  let nomeEtapa;
+  return {
+    iniciar(nome) {
+      etapa?.finish();
+      nomeEtapa = nome;
+      etapa = step.startChild('pedido.etapa', nome);
+    },
+    finalizar: () => etapa?.finish(),
+    get nomeAtual() { return nomeEtapa; },
+  };
+}
+```
+
+**Takeaway:**
+- Função pura (sem depender de nada externo) → boa candidata a `utils/`.
+- Closure que muta variáveis do escopo ao redor → geralmente fica melhor perto de onde é usada, a não ser que vire uma função fábrica.
+- Só extraia quando o mesmo padrão aparecer de verdade em um segundo lugar — abstrair cedo demais costuma acertar a forma errada.
+
+---
+
+## 2026-09-22 — Pra que serve o `evaluate` e como os argumentos funcionam
+
+**Contexto:** [`realizarPedido.js:91-104`](../src/actions/realizarPedido.js#L91-L104) (`page.evaluate`), e também `evaluateHandle`/`elementHandle.evaluate` nas linhas 136, 153 e 174 do mesmo arquivo.
+
+**Dúvida:** detalhar pra que serve o `evaluate` e como os parâmetros passados pra ele funcionam.
+
+**Resposta:** o Puppeteer (Node.js, no seu processo) e o navegador (Chromium, outro processo) são **dois mundos separados**, conectados por um protocolo (CDP). Seu código Node não tem `document`/`window` — quem tem é o navegador. `page.evaluate(fn, ...args)` serializa `fn`, manda ela pro navegador, ela roda **lá dentro** (como se fosse digitada no console do DevTools daquela aba), e o `return` dela volta serializado pro `await` no Node.
+
+**Entrada de dados (Node → navegador):** a função passada não enxerga o escopo externo do Node (mesmo parecendo uma closure comum) — só recebe o que for passado como argumento extra depois da função. Ex.: `page.evaluate((selectElem, nome) => {...}, clienteSelect, clienteNome)` — `clienteNome` (string) viaja como JSON; `clienteSelect` é um `ElementHandle`, que o Puppeteer resolve automaticamente pro elemento DOM real dentro do navegador. Prova de que não há acesso ao escopo externo: em [linha 136-141](../src/actions/realizarPedido.js#L136-L141) a função `textoNormalizado` (já importada no topo do arquivo) teve que ser **redeclarada dentro** do callback — o `import` só existe no mundo Node, não dentro do navegador.
+
+**Saída de dados (navegador → Node):** o `return` da função vira o valor resolvido do `await`. Ex.: [linha 153-158](../src/actions/realizarPedido.js#L153-L158) devolve um array de strings (`saboresDisponiveis`) usado depois em Node.
+
+**Erros atravessam a ponte:** um `throw` dentro da função ([linha 97](../src/actions/realizarPedido.js#L97)) vira uma rejeição da Promise no Node, capturável pelo `try/catch` normal.
+
+**Três variantes, quando usar cada uma:**
+
+| | Quando usar |
+|---|---|
+| `page.evaluate(fn, ...args)` | Quer um valor simples de volta (string, número, array, ou nada) |
+| `elementHandle.evaluate(fn, ...args)` | Igual, mas o próprio elemento já entra como 1º parâmetro automaticamente (`pizzaContainer.evaluate((container) => ...)`) |
+| `evaluateHandle(fn, ...args)` | Quer manter uma **referência viva** a um elemento DOM pra continuar manipulando depois (ex.: clicar) — devolve um `JSHandle`, use `.asElement()` pra virar um `ElementHandle` clicável |
+
+O motivo do `evaluateHandle` existir: um elemento DOM não vira JSON, então `.evaluate()` comum não consegue devolvê-lo como valor. Nas linhas 136 e 174, o código precisa achar um elemento e depois clicar nele, então usa `evaluateHandle` + `.asElement()`.
+
+**Takeaway:**
+- Se a função do `evaluate` usa algo que não é parâmetro dela, esse algo **não existe** lá dentro — redeclare ou passe como argumento.
+- Argumentos só podem ser JSON-serializáveis (string, número, booleano, array/objeto simples, `null`) ou um `ElementHandle`/`JSHandle`.
+- Precisa de um valor de volta → `.evaluate()`. Precisa continuar manipulando um elemento depois → `.evaluateHandle()` + `.asElement()`.
+- Handles de `evaluateHandle` devem ser descartados com `.dispose()` pra não vazar referências no lado do navegador.

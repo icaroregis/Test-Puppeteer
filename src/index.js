@@ -6,33 +6,38 @@ import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
 // REGISTRAR A TAREFA (sob demanda: o robô fica online aguardando solicitações)
-Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
-  const console = ctx.log;
-  console.info('Iniciando o processamento dos pedidos da planilha.');
+Hobots.register(
+  process.env.TASK_SLUG,
+  async (_params, ctx) => {
+    const console = ctx.log;
+    console.info('Iniciando o processamento dos pedidos da planilha.');
 
-  // 0 PASSO INICIAR O BROWSER
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-    args: ['--disable-infobars', '--start-maximized'],
-  });
-  const page = await browser.newPage();
+    // 0 PASSO INICIAR O BROWSER
+    const browser = await puppeteer.launch({
+      headless: false,
+      defaultViewport: null,
+      args: ['--disable-infobars', '--start-maximized'],
+    });
+    const page = await browser.newPage();
 
-  // 1 PASSO FAZER LOGIN
-  await login(page);
+    // 1 PASSO FAZER LOGIN
+    await login(page);
 
-  // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
-  await selectItemSidebar(page);
+    // 2 PASSO ACESSAR O MENU DO SIDEBAR PARA REALIZAR PEDIDO
+    await selectItemSidebar(page);
 
-  // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
-  const pedidos = await getDataExcel(ctx);
+    // 3 BUSCAR DADOS DA PLANILHA LIBREOFFICE
+    const pedidos = await getDataExcel(ctx);
 
-  // 4 PASSO REALIZAR O PEDIDO
-  await realizarPedido(page, pedidos, ctx);
+    // 4 PASSO REALIZAR O PEDIDO
+    await realizarPedido(page, pedidos, ctx);
 
-  // 5 PASSO FECHAR O BROWSER
-  await browser.close();
-}, {
-  environment: process.env.HOBOTS_ENVIRONMENT?.trim() || undefined,
-  release: process.env.HOBOTS_RELEASE?.trim() || undefined,
-});
+    // 5 PASSO FECHAR O BROWSER
+    await browser.close();
+  },
+  {
+    environment: process.env.HOBOTS_ENVIRONMENT?.trim() || undefined,
+    release: process.env.HOBOTS_RELEASE?.trim() || undefined,
+    debug: true,
+  },
+);

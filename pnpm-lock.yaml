@@ -12,8 +12,8 @@ importers:
         specifier: ^1.3.3
         version: 1.3.3
       hobots:
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^3.0.0
+        version: 3.0.0
       puppeteer:
         specifier: ^25.11.0
         version: 25.11.0
@@ -99,8 +99,8 @@ packages:
     resolution: {integrity: sha512-XjH1AECxf0giL2V1aU8vKyRR2ppRUb5c0EvT7zuJTokQ74bNo52zOtghqdWIqrhUD79fo3x0WfKZdOqxF6LG1Q==}
     engines: {node: '>=18'}
 
-  hobots@2.2.0:
-    resolution: {integrity: sha512-CFlpqkuAm5w+kwjWe0xcSVJ5N7pIQMAffEwlYxiGWAA95y3xJUdplAw2u7Q3DulpYJagp96WEDA8QU+5OtmXzg==}
+  hobots@3.0.0:
+    resolution: {integrity: sha512-ue47ndipfnLvOd2UJ5AxwM1tj+IOC+kmsMnhFiMfpmDfFuOXFuSEhHDgOsxY3sl9Phjqogs+FCb7is5Db5LJbQ==}
     engines: {node: '>=18'}
 
   lilconfig@3.1.3:
@@ -243,7 +243,7 @@ snapshots:
 
   get-east-asian-width@1.7.0: {}
 
-  hobots@2.2.0: {}
+  hobots@3.0.0: {}
 
   lilconfig@3.1.3: {}
 

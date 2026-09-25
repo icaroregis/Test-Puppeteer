@@ -1,15 +1,11 @@
 import puppeteer from 'puppeteer';
 import * as Hobots from 'hobots';
-import { initHobots } from './hobots.js';
 import { login } from './actions/login.js';
 import { getDataExcel } from './actions/getDataExcel.js';
 import { realizarPedido } from './actions/realizarPedido.js';
 import { selectItemSidebar } from './actions/selectItemSidebar.js';
 
-// INICIAR O HOBOTS
-initHobots();
-
-// REGISTRAR A TAREFA
+// REGISTRAR A TAREFA (sob demanda: o robô fica online aguardando solicitações)
 Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
   const console = ctx.log;
   console.info('Iniciando o processamento dos pedidos da planilha.');
@@ -36,6 +32,7 @@ Hobots.register(process.env.TASK_SLUG, async (_params, ctx) => {
 
   // 5 PASSO FECHAR O BROWSER
   await browser.close();
+}, {
+  environment: process.env.HOBOTS_ENVIRONMENT?.trim() || undefined,
+  release: process.env.HOBOTS_RELEASE?.trim() || undefined,
 });
-
-Hobots.start();

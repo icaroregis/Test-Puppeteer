@@ -96,7 +96,6 @@ node --test tests/
 ```
 src/
   index.js                 # Orquestra o fluxo completo
-  hobots.js                # Inicializa o SDK da Hobots
   actions/
     login.js               # Login, com retry
     selectItemSidebar.js   # Navegação pelo sidebar

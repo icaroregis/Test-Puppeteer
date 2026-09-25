@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 export async function getDataExcel(ctx) {
   const console = ctx.log;
   try {
-    const excelPath = path.resolve(__dirname, '/home/icaro-almeida/Documentos/pedidos.ods');
+    const excelPath = path.resolve(__dirname, '..', '..', 'data', 'pedidos.ods');
     console.info('Lendo planilha em:', excelPath);
 
     const workbook = XLSX.readFile(excelPath);

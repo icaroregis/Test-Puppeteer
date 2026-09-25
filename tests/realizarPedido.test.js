@@ -110,7 +110,7 @@ function setup(options = {}) {
   };
   const ctx = {
     log: { info: log, warn: log, error: log },
-    tx: { startChild: step },
+    transaction: { startChild: step },
     items: {
       succeeded: (payload, extra) => state.items.push({ status: 'succeeded', payload, ...extra }),
       failed: (message, payload, extra) => state.items.push({ status: 'failed', message, payload, ...extra }),

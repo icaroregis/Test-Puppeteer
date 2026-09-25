@@ -9,7 +9,6 @@ export async function realizarPedido(page, pedidos, ctx) {
   for (const [index, row] of pedidos.entries()) {
     const numeroPedido = index + 1;
     const clienteNome = row['CLIENTE'];
-    console.log('clienteNome', clienteNome);
     const tipoSelecionado = textoNormalizado(row['TIPO']);
     const formaPagamento = row['FORMA DE PAGAMENTO'];
     const taxaEntrega = row['TAXA DE ENTREGA'];
@@ -24,7 +23,7 @@ export async function realizarPedido(page, pedidos, ctx) {
     };
 
     console.info(`Processando registro ${numeroPedido}:`, row);
-    const step = ctx.tx.startChild('pedido', `${clienteNome ?? 'pedido'} · ${itensPedidoStr ?? ''}`);
+    const step = ctx.transaction.startChild('pedido', `${clienteNome ?? 'pedido'} · ${itensPedidoStr ?? ''}`);
     let etapa;
     let nomeEtapa;
     const iniciarEtapa = (nome) => {
